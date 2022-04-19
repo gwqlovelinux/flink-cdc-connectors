@@ -67,7 +67,7 @@ under the License.
     </distributionManagement>
 
     <properties>
-        <flink.version>1.13.3</flink.version>
+        <flink.version>1.14.4</flink.version>
         <debezium.version>1.5.4.Final</debezium.version>
         <geometry.version>2.2.0</geometry.version>
         <!-- OracleE2eITCase will report "container cannot be accessed" error when running in Azure Pipeline with 1.16.1 testconainters.
@@ -217,36 +217,36 @@ under the License.
             <!-- Due to the Flink build setup, "mvn spotless:apply" and "mvn spotless:check"
 				don't work. You have to use the fully qualified name, i.e.
 				"mvn com.diffplug.spotless:spotless-maven-plugin:apply" -->
-            <plugin>
-                <groupId>com.diffplug.spotless</groupId>
-                <artifactId>spotless-maven-plugin</artifactId>
-                <version>${spotless.version}</version>
-                <configuration>
-                    <java>
-                        <googleJavaFormat>
-                            <version>1.7</version>
-                            <style>AOSP</style>
-                        </googleJavaFormat>
+<!--            <plugin>-->
+<!--                <groupId>com.diffplug.spotless</groupId>-->
+<!--                <artifactId>spotless-maven-plugin</artifactId>-->
+<!--                <version>${spotless.version}</version>-->
+<!--                <configuration>-->
+<!--                    <java>-->
+<!--                        <googleJavaFormat>-->
+<!--                            <version>1.7</version>-->
+<!--                            <style>AOSP</style>-->
+<!--                        </googleJavaFormat>-->
 
-                        <!-- \# refers to the static imports -->
-                        <importOrder>
-                            <order>org.apache.flink,org.apache.flink.shaded,,javax,java,scala,\#
-                            </order>
-                        </importOrder>
+<!--                        &lt;!&ndash; \# refers to the static imports &ndash;&gt;-->
+<!--                        <importOrder>-->
+<!--                            <order>org.apache.flink,org.apache.flink.shaded,,javax,java,scala,\#-->
+<!--                            </order>-->
+<!--                        </importOrder>-->
 
-                        <removeUnusedImports/>
-                    </java>
-                </configuration>
-                <executions>
-                    <execution>
-                        <id>spotless-check</id>
-                        <phase>validate</phase>
-                        <goals>
-                            <goal>check</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
+<!--                        <removeUnusedImports/>-->
+<!--                    </java>-->
+<!--                </configuration>-->
+<!--                <executions>-->
+<!--                    <execution>-->
+<!--                        <id>spotless-check</id>-->
+<!--                        <phase>validate</phase>-->
+<!--                        <goals>-->
+<!--                            <goal>check</goal>-->
+<!--                        </goals>-->
+<!--                    </execution>-->
+<!--                </executions>-->
+<!--            </plugin>-->
 
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
