@@ -40,7 +40,9 @@ public class MySqlSnapshotSplit extends MySqlSplit {
 
     @Nullable private final Object[] splitStart;
     @Nullable private final Object[] splitEnd;
-    /** The high watermark is not bull when the split read finished. */
+    /** The high watermark is not bull when the split read finished.
+     *  snapshot 完成了，就会读取当前的binlog 水位，写入highWatermark
+     * */
     @Nullable private final BinlogOffset highWatermark;
 
     @Nullable transient byte[] serializedFormCache;

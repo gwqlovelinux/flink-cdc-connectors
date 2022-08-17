@@ -108,6 +108,8 @@ public class MySqlSourceReader<T>
     @Override
     public void start() {
         if (getNumberOfCurrentlyAssignedSplits() == 0) {
+            // 给SplitEnumerator发送请求，触发SplitEnumerator#handleSplitRequest(int, String)方法，所以reader和触发SplitEnumerator
+            // 是主动拉的模式
             context.sendSplitRequest();
         }
     }
@@ -132,6 +134,7 @@ public class MySqlSourceReader<T>
                         .collect(Collectors.toList());
 
         // add finished snapshot splits that didn't receive ack yet
+        // TODO：奇奇怪怪，为什么上面通过fliter过滤了finishedUnackedSplits，这里有add进去
         unfinishedSplits.addAll(finishedUnackedSplits.values());
 
         // add binlog splits who are uncompleted
@@ -146,9 +149,11 @@ public class MySqlSourceReader<T>
 
     @Override
     protected void onSplitFinished(Map<String, MySqlSplitState> finishedSplitIds) {
+        // 目的：Handles the finished splits to clean the state if needed.
         for (MySqlSplitState mySqlSplitState : finishedSplitIds.values()) {
             MySqlSplit mySqlSplit = mySqlSplitState.toMySqlSplit();
             if (mySqlSplit.isBinlogSplit()) {
+                // TODO： 为什么是binlogSplit类型，就可能加了新表？？
                 LOG.info(
                         "binlog split reader suspended due to newly added table, offset {}",
                         mySqlSplitState.asBinlogSplitState().getStartingOffset());
@@ -160,12 +165,16 @@ public class MySqlSourceReader<T>
                 finishedUnackedSplits.put(mySqlSplit.splitId(), mySqlSplit.asSnapshotSplit());
             }
         }
+        // 批量通知Coordinator，SnapshotSplits已经OK了
         reportFinishedSnapshotSplitsIfNeed();
+        // 请求新的Splits
         context.sendSplitRequest();
     }
 
     @Override
+
     public void addSplits(List<MySqlSplit> splits) {
+        //  由SplitEnumeratorContext.assignSplit调用，分配新的split给reader
         // restore for finishedUnackedSplits
         List<MySqlSplit> unfinishedSplits = new ArrayList<>();
         for (MySqlSplit split : splits) {
@@ -225,6 +234,7 @@ public class MySqlSourceReader<T>
     @Override
     public void handleSourceEvents(SourceEvent sourceEvent) {
         if (sourceEvent instanceof FinishedSnapshotSplitsAckEvent) {
+            // 清理掉Unacked里面的split
             FinishedSnapshotSplitsAckEvent ackEvent = (FinishedSnapshotSplitsAckEvent) sourceEvent;
             LOG.debug(
                     "The subtask {} receives ack event for {} from enumerator.",
@@ -238,6 +248,7 @@ public class MySqlSourceReader<T>
             LOG.debug(
                     "The subtask {} receives request to report finished snapshot splits.",
                     subtaskId);
+            // 上报完结的Snapshot Splits
             reportFinishedSnapshotSplitsIfNeed();
         } else if (sourceEvent instanceof BinlogSplitMetaEvent) {
             LOG.debug(
@@ -267,6 +278,7 @@ public class MySqlSourceReader<T>
                 this.addSplits(Collections.singletonList(binlogSplit));
             }
         } else {
+            // 其他flink的共性event，给base处理
             super.handleSourceEvents(sourceEvent);
         }
     }
