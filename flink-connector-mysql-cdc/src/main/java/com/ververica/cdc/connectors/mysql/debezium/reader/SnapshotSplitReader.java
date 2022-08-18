@@ -88,6 +88,7 @@ public class SnapshotSplitReader implements DebeziumReader<SourceRecord, MySqlSp
         this.reachEnd = new AtomicBoolean(false);
     }
 
+    @Override
     public void submitSplit(MySqlSplit mySqlSplit) {
         this.currentSnapshotSplit = mySqlSplit.asSnapshotSplit();
         statefulTaskContext.configure(currentSnapshotSplit);
@@ -116,6 +117,7 @@ public class SnapshotSplitReader implements DebeziumReader<SourceRecord, MySqlSp
                         SnapshotResult snapshotResult =
                                 splitSnapshotReadTask.execute(sourceContext);
 
+                        // 只关注Snapshot开始和结束的高低水位
                         final MySqlBinlogSplit backfillBinlogSplit =
                                 createBackfillBinlogSplit(sourceContext);
                         // optimization that skip the binlog read when the low watermark equals high
@@ -125,12 +127,14 @@ public class SnapshotSplitReader implements DebeziumReader<SourceRecord, MySqlSp
                                         .getEndingOffset()
                                         .isAfter(backfillBinlogSplit.getStartingOffset());
                         if (!binlogBackfillRequired) {
+                            // 发送binlogEnd的event
                             dispatchBinlogEndEvent(backfillBinlogSplit);
                             currentTaskRunning = false;
                             return;
                         }
 
                         // execute binlog read task
+                        // 根据snapshotResult来触发MySqlBinlogSplitReadTask，指定同步的table和position(low-watermark,high-watermark)
                         if (snapshotResult.isCompletedOrSkipped()) {
                             final MySqlBinlogSplitReadTask backfillBinlogReadTask =
                                     createBackfillBinlogReadTask(backfillBinlogSplit);

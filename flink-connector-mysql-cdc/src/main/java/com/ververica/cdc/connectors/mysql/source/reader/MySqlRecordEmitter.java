@@ -61,6 +61,7 @@ public final class MySqlRecordEmitter<T>
     private final DebeziumDeserializationSchema<T> debeziumDeserializationSchema;
     private final MySqlSourceReaderMetrics sourceReaderMetrics;
     private final boolean includeSchemaChanges;
+    // The SourceOutput is the gateway for a SourceReader) to emit the produced records and watermarks.
     private final OutputCollector<T> outputCollector;
 
     public MySqlRecordEmitter(
@@ -73,6 +74,14 @@ public final class MySqlRecordEmitter<T>
         this.outputCollector = new OutputCollector<>();
     }
 
+    /**
+     * Process and emit the records to the SourceOutput.
+     * 由sourceReaderBase.pollNext() 在while中循环调用
+     * @param element
+     * @param output
+     * @param splitState
+     * @throws Exception
+     */
     @Override
     public void emitRecord(SourceRecord element, SourceOutput<T> output, MySqlSplitState splitState)
             throws Exception {

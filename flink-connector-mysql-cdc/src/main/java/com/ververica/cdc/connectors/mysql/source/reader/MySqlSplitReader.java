@@ -47,7 +47,9 @@ import java.util.Queue;
 import static com.ververica.cdc.connectors.mysql.debezium.DebeziumUtils.createBinaryClient;
 import static com.ververica.cdc.connectors.mysql.debezium.DebeziumUtils.createMySqlConnection;
 
-/** The {@link SplitReader} implementation for the {@link MySqlSource}. */
+/** The {@link SplitReader} implementation for the {@link MySqlSource}.
+ *  对Snapshot和binlog两种模式都支持
+ * */
 public class MySqlSplitReader implements SplitReader<SourceRecord, MySqlSplit> {
 
     private static final Logger LOG = LoggerFactory.getLogger(MySqlSplitReader.class);
@@ -120,8 +122,12 @@ public class MySqlSplitReader implements SplitReader<SourceRecord, MySqlSplit> {
         }
     }
 
+    /**
+     * 根据Split的信息来实例化DebeziumReader,并submit给DebeziumReader
+     * */
     private void checkSplitOrStartNext() throws IOException {
         if (canAssignNextSplit()) {
+            // 检查当前的Split是否为空或者已经完成
             MySqlSplit nextSplit = splits.poll();
             if (nextSplit == null) {
                 return;
@@ -160,6 +166,7 @@ public class MySqlSplitReader implements SplitReader<SourceRecord, MySqlSplit> {
                 currentReader = new BinlogSplitReader(statefulTaskContext, subtaskId);
                 LOG.info("BinlogSplitReader is created.");
             }
+            // 提交给DebezReader处理
             currentReader.submitSplit(nextSplit);
         }
     }

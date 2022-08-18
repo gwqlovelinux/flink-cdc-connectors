@@ -87,6 +87,12 @@ public class BinlogSplitReader implements DebeziumReader<SourceRecord, MySqlSpli
         this.currentTaskRunning = true;
     }
 
+    /**
+     * Add to split to read, this should call only the when reader is idle.
+     * 由MysqlSplitReader调用
+     * @param mySqlSplit
+     */
+    @Override
     public void submitSplit(MySqlSplit mySqlSplit) {
         this.currentBinlogSplit = mySqlSplit.asBinlogSplit();
         configureFilter();
