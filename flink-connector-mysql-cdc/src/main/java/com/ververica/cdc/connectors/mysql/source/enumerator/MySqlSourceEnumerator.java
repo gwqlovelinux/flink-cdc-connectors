@@ -108,6 +108,13 @@ public class MySqlSourceEnumerator implements SplitEnumerator<MySqlSplit, Pendin
                 CHECK_EVENT_INTERVAL);
     }
 
+    /**
+     * Handles the request for a split.
+     * This method is called when the reader with the given subtask id
+     * calls the SourceReaderContext.sendSplitRequest() method.
+     * @param subtaskId
+     * @param requesterHostname
+     */
     @Override
     public void handleSplitRequest(int subtaskId, @Nullable String requesterHostname) {
         if (!context.registeredReaders().containsKey(subtaskId)) {
@@ -203,6 +210,7 @@ public class MySqlSourceEnumerator implements SplitEnumerator<MySqlSplit, Pendin
             Optional<MySqlSplit> split = splitAssigner.getNext();
             if (split.isPresent()) {
                 final MySqlSplit mySqlSplit = split.get();
+                // TODO：分配split给reader还是通过context来的，要仔细看看context在Enumerator和reader间的通信
                 context.assignSplit(mySqlSplit, nextAwaiting);
                 awaitingReader.remove();
                 LOG.info("Assign split {} to subtask {}", mySqlSplit, nextAwaiting);
@@ -227,6 +235,8 @@ public class MySqlSourceEnumerator implements SplitEnumerator<MySqlSplit, Pendin
         // when the SourceEnumerator restores or the communication failed between
         // SourceEnumerator and SourceReader, it may missed some notification event.
         // tell all SourceReader(s) to report there finished but unacked splits.
+
+        // Enumerator重启，或者和reader 通信失败，可能会丢失部分事件；此时去主动告诉SourceReaders，上报finished but unacked splits
         if (splitAssigner.waitingForFinishedSplits()) {
             for (int subtaskId : subtaskIds) {
                 context.sendEventToSourceReader(

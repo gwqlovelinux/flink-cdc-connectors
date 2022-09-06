@@ -101,6 +101,7 @@ public class MySqlHybridSplitAssigner implements MySqlSplitAssigner {
             // do not assign split until the assigner received SuspendBinlogReaderAckEvent
             return Optional.empty();
         }
+        // 如果全量还有split未处理，那继续处理，如果处理完了，就开启binlog的处理
         if (snapshotSplitAssigner.noMoreSplits()) {
             // binlog split assigning
             if (isBinlogSplitAssigned) {

@@ -79,6 +79,7 @@ class ChunkSplitter {
             long start = System.currentTimeMillis();
 
             Table table = mySqlSchema.getTableSchema(jdbc, tableId).getTable();
+            // 扫描的表必须有pk，如果是联合主键，取主键的第一个。
             Column splitColumn = ChunkUtils.getSplitColumn(table);
             final List<ChunkRange> chunks;
             try {
@@ -128,6 +129,7 @@ class ChunkSplitter {
     private List<ChunkRange> splitTableIntoChunks(
             JdbcConnection jdbc, TableId tableId, Column splitColumn) throws SQLException {
         final String splitColumnName = splitColumn.name();
+        // 根据主键，查询表的主键的min，max
         final Object[] minMaxOfSplitColumn = queryMinMax(jdbc, tableId, splitColumnName);
         final Object min = minMaxOfSplitColumn[0];
         final Object max = minMaxOfSplitColumn[1];
@@ -137,11 +139,14 @@ class ChunkSplitter {
         }
 
         final int chunkSize = sourceConfig.getSplitSize();
+        // distributionFactor 对于动态调整chunks大小很关键，经常OOM就是这个原因
         final double distributionFactorUpper = sourceConfig.getDistributionFactorUpper();
         final double distributionFactorLower = sourceConfig.getDistributionFactorLower();
 
         if (isEvenlySplitColumn(splitColumn)) {
+            // 为了提高效率，没有用count(*)，而是用了mysql的统计信息
             long approximateRowCnt = queryApproximateRowCnt(jdbc, tableId);
+            // factor = (max - min + 1) / approximateRowCount
             double distributionFactor =
                     calculateDistributionFactor(tableId, min, max, approximateRowCnt);
 
@@ -149,6 +154,7 @@ class ChunkSplitter {
                     doubleCompare(distributionFactor, distributionFactorLower) >= 0
                             && doubleCompare(distributionFactor, distributionFactorUpper) <= 0;
 
+            // 通过判断数据是否均匀分布，动态调整chunk的大小，如果Factor很大，很可能chunkSize就很大，一次读太多行到内存，导致OOM
             if (dataIsEvenlyDistributed) {
                 // the minimum dynamic chunk size is at least 1
                 final int dynamicChunkSize = Math.max((int) (distributionFactor * chunkSize), 1);
@@ -293,7 +299,7 @@ class ChunkSplitter {
             return Double.MAX_VALUE;
         }
         BigDecimal difference = ObjectUtils.minus(max, min);
-        // factor = (max - min + 1) / rowCount
+        // factor = (max - min + 1) / approximateRowCount
         final BigDecimal subRowCnt = difference.add(BigDecimal.valueOf(1));
         double distributionFactor =
                 subRowCnt.divide(new BigDecimal(approximateRowCnt), 4, ROUND_CEILING).doubleValue();

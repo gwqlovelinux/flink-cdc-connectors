@@ -164,9 +164,11 @@ public class MySqlSnapshotSplitAssigner implements MySqlSplitAssigner {
     }
 
     private void captureNewlyAddedTables() {
+        // 似乎是2.2新增的特性：支持动态新增表
         if (sourceConfig.isScanNewlyAddedTableEnabled()) {
             // check whether we got newly added tables
             try (JdbcConnection jdbc = openJdbcConnection(sourceConfig)) {
+                // 新增的表 = 根据配置获取所有的表 - 已经处理的表 - 其余未处理的表
                 final List<TableId> newlyAddedTables = discoverCapturedTables(jdbc, sourceConfig);
                 newlyAddedTables.removeAll(alreadyProcessedTables);
                 newlyAddedTables.removeAll(remainingTables);
@@ -211,6 +213,7 @@ public class MySqlSnapshotSplitAssigner implements MySqlSplitAssigner {
                 MySqlSnapshotSplit split = iterator.next();
                 remainingSplits.remove(split);
                 assignedSplits.put(split.splitId(), split);
+                // TODO：此处是否会存在：table处理了部分，部分未处理？
                 addAlreadyProcessedTablesIfNotExists(split.getTableId());
                 return Optional.of(split);
             } else if (!remainingTables.isEmpty()) {
@@ -223,6 +226,7 @@ public class MySqlSnapshotSplitAssigner implements MySqlSplitAssigner {
                 }
                 return getNext();
             } else {
+                // 监控的表处理完了，切割的split也处理完了，就关闭
                 closeExecutorService();
                 return Optional.empty();
             }
@@ -383,6 +387,9 @@ public class MySqlSnapshotSplitAssigner implements MySqlSplitAssigner {
         return noMoreSplits() && assignedSplits.size() == splitFinishedOffsets.size();
     }
 
+    /**
+     * 通过对remainingTables进行切割chunks，封装成splits加入到remainingSplits，等待后续的全量数据拉取
+     */
     private void splitChunksForRemainingTables() {
         try {
             for (TableId nextTable : remainingTables) {

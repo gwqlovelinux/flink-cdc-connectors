@@ -131,6 +131,7 @@ public class MySqlBinlogSplitAssigner implements MySqlSplitAssigner {
         try (JdbcConnection jdbc = DebeziumUtils.openJdbcConnection(sourceConfig)) {
             return new MySqlBinlogSplit(
                     BINLOG_SPLIT_ID,
+                    // 获取当前mysql server的binlog offset， fileName+pos
                     currentBinlogOffset(jdbc),
                     BinlogOffset.NO_STOPPING_OFFSET,
                     new ArrayList<>(),

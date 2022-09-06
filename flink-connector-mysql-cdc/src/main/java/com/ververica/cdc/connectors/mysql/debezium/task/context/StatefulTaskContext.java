@@ -217,6 +217,7 @@ public class StatefulTaskContext {
                     availableGtidSet,
                     gtidSet);
             // The replication is concept of mysql master-slave replication protocol ...
+            // 牛逼，用了SELECT GTID_SUBTRACT(?, ?) 函数
             final GtidSet gtidSetToReplicate =
                     connection.subtractGtidSet(availableGtidSet, gtidSet);
             final GtidSet purgedGtidSet = connection.purgedGtidSet();
